@@ -1,0 +1,726 @@
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a0e0c;
+  --surface: #1f2421;
+  --border: #3a413d;
+  --text: #faf7f0;
+  --muted: #9ca3af;
+  --primary: #14532d;
+  --primaryHover: #1b7a47;
+  --accent: #14b8a6;
+  --danger: #ec4899;
+  --warning: #f59e0b;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #faf7f0;
+  --surface: #f2ede0;
+  --border: #d1d5db;
+  --text: #0a0e0c;
+  --muted: #9ca3af;
+  --primary: #0f3d2e;
+  --primaryHover: #14532d;
+  --accent: #14b8a6;
+  --danger: #ec4899;
+  --warning: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.appRoot {
+  min-height: 100vh;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.tabsRail {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  align-content: start;
+}
+
+.tabBtn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  font-family: "JetBrains Mono", monospace;
+  cursor: pointer;
+}
+
+.tabBtn-active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 26%, transparent);
+}
+
+.tabPanel {
+  min-width: 0;
+}
+
+.topBar {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 1rem;
+}
+
+.topBarActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.fieldRow {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.brand {
+  margin: 0;
+  font-family: "Press Start 2P", monospace;
+  font-size: 14px;
+  text-transform: lowercase;
+}
+
+.brandPixel {
+  color: #14b8a6;
+}
+
+h2,
+h3 {
+  margin-top: 0;
+  font-family: "Space Grotesk", Inter, sans-serif;
+}
+
+.label {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.danger {
+  color: #dc2626;
+}
+
+.mono,
+code {
+  font-family: "JetBrains Mono", monospace;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.adminGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1100px) {
+  .grid,
+  .adminGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .topBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .tabsRail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.card,
+.panel {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 1rem;
+}
+
+.panel {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.between {
+  justify-content: space-between;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 88%, var(--bg));
+  color: var(--text);
+  padding: 0.6rem 0.7rem;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+
+.tiny {
+  width: auto;
+  min-width: 120px;
+}
+
+textarea.input {
+  min-height: 110px;
+}
+
+.input:focus-visible,
+.btn:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, #5eead4 25%, transparent);
+}
+
+.btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  padding: 0.6rem 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 140ms ease-out, background-color 140ms ease-out, color 140ms ease-out;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #faf7f0;
+}
+
+.btn-primary:not(:disabled):hover {
+  background: var(--primaryHover);
+}
+
+.btn-secondary {
+  border-color: var(--primary);
+}
+
+.btn-secondary:not(:disabled):hover,
+.btn-ghost:not(:disabled):hover {
+  border-color: var(--accent);
+}
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-danger:not(:disabled):hover {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+}
+
+.btn-warning {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.btn-warning:not(:disabled):hover {
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+}
+
+.pill {
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.5rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.state-idle {
+  border-color: #9ca3af;
+}
+
+.state-initializing {
+  border-color: #5eead4;
+}
+
+.state-qr {
+  border-color: #f59e0b;
+}
+
+.state-authenticated {
+  border-color: #14b8a6;
+}
+
+.state-ready {
+  border-color: #1b7a47;
+}
+
+.state-auth_failure {
+  border-color: #ec4899;
+}
+
+.state-disconnected {
+  border-color: #9ca3af;
+  border-style: dashed;
+}
+
+.state-destroyed {
+  border-color: #3a413d;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.list li {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.6rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.compactList {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.listBtn {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.listBtn-active {
+  border-color: var(--accent);
+}
+
+.qrWrap {
+  display: grid;
+  justify-content: start;
+  gap: 0.4rem;
+}
+
+.qr {
+  width: 220px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.dialogBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.dialog {
+  width: min(720px, 100%);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90vh, 900px);
+  overflow: hidden;
+}
+
+.dialogShell {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.dialogHeader {
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dialogHeader h3 {
+  margin: 0;
+}
+
+.dialogBody {
+  padding: 1rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: grid;
+  gap: 0.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.fieldReadonly {
+  border: 1px solid var(--border);
+  padding: 0.6rem 0.7rem;
+  background: color-mix(in srgb, var(--surface) 88%, var(--bg));
+  color: var(--text);
+}
+
+.smallId {
+  font-size: 11px;
+  margin: 0;
+  word-break: break-all;
+}
+
+.row.wrap {
+  flex-wrap: wrap;
+}
+
+.chatListTitle {
+  font-weight: 600;
+}
+
+.chatListMeta {
+  margin: 0.15rem 0 0;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  font-family: "JetBrains Mono", monospace;
+  word-break: break-all;
+}
+
+/* Behaviours tab: vertical rhythm + assignment rows */
+.behavioursStack {
+  display: grid;
+  gap: 1.15rem;
+  margin-top: 0.35rem;
+}
+
+.behavioursToolbar {
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.behavioursIntro {
+  margin: 0;
+  line-height: 1.55;
+  max-width: 52rem;
+}
+
+.behavioursAssignList.list li.behaviourAssignItem {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.behaviourAssignTitle {
+  min-width: 0;
+}
+
+.behaviourTemplateId {
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.behaviourAssignControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem 1.25rem;
+}
+
+.behaviourDeleteBtn {
+  margin-left: auto;
+}
+
+.behaviourPriorityField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.behaviourPriorityLabel {
+  margin: 0;
+}
+
+.behavioursAddBlock {
+  padding-top: 0.15rem;
+}
+
+.behavioursBannerPanel {
+  margin-top: 0.15rem;
+}
+
+.behavioursBannerHint {
+  margin: 0;
+  line-height: 1.5;
+  max-width: 48rem;
+}
+
+.behavioursRepeaterPanel textarea.input {
+  resize: vertical;
+  min-height: 4.5rem;
+}
+
+.behavioursRepeaterNums {
+  align-items: flex-end;
+}
+
+.behavioursRepeaterHint {
+  margin: 0;
+  line-height: 1.5;
+  max-width: 48rem;
+}
+
+.behavioursProductsPanel {
+  margin-top: 0.2rem;
+}
+
+.behavioursProducts2Panel {
+  margin-top: 0.2rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.behavioursProductsHint {
+  margin: 0;
+  line-height: 1.5;
+  max-width: 48rem;
+}
+
+.products2GroupCheck {
+  min-width: 220px;
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.5rem;
+}
+
+.products2BoardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.6rem;
+}
+
+.products2BoardList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+}
+
+.products2Card {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 82%, var(--bg));
+  color: var(--text);
+  text-align: left;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.65rem;
+  cursor: pointer;
+}
+
+.products2Card-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.products2Card-missing {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.chatActionsInline {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.chatActionsUnderItem {
+  margin-top: 0.5rem;
+}
+
+.chatSendUnderItem {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.65rem;
+}
+
+.chatUnderItemHeading {
+  margin: 0 0 0.45rem;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: inherit;
+}
+
+.spinner {
+  display: inline-block;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-top-color: var(--accent);
+  border-radius: 0;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+  animation: spinSteps 0.85s steps(8) infinite;
+}
+
+.spinner-sm {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-width: 2px;
+  margin-right: 0.25rem;
+}
+
+@keyframes spinSteps {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.crtBlink {
+  font-family: "VT323", monospace;
+  font-size: 1.05rem;
+  animation: crtPulse 1s steps(1, end) infinite;
+}
+
+@keyframes crtPulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.loginWrap {
+  min-height: calc(100vh - 84px);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.loginCard {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.sourcePicker {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.adminUserTools {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toastStack {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  display: grid;
+  gap: 0.4rem;
+  width: min(360px, calc(100vw - 2rem));
+}
+
+.toast {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.6rem 0.7rem;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.toast-success {
+  border-color: #1b7a47;
+}
+
+.toast-info {
+  border-color: #14b8a6;
+}
+
+.toast-warning {
+  border-color: #f59e0b;
+}
+
+.toast-danger {
+  border-color: #ec4899;
+}
