@@ -14,6 +14,8 @@ import {
   type User,
   createApiClient,
 } from "./api";
+import { Products2Panel, type Products2Api } from "./products2/Products2Panel";
+import { SawaboApiPanel, type SawaboApiClient } from "./sawaboApi/SawaboApiPanel";
 
 type Theme = "dark" | "light";
 type ToastTone = "success" | "info" | "warning" | "danger";
@@ -40,6 +42,22 @@ function parsePhoneToTarget(input: string): { ok: true; to: string } | { ok: fal
     return { ok: false, message: "Use digits with country code, e.g. 14155550100." };
   }
   return { ok: true, to: digits };
+}
+
+/** Parse legacy Products "Active weekdays" field (0=Sun … 6=Sat) into sorted unique ints for templateConfig. */
+function parseAllowedWeekdays(input: string): number[] {
+  const parts = input
+    .split(/[\s,;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const days = new Set<number>();
+  for (const p of parts) {
+    const n = Math.floor(Number(p));
+    if (!Number.isFinite(n)) continue;
+    if (n >= 0 && n <= 6) days.add(n);
+  }
+  const arr = Array.from(days).sort((a, b) => a - b);
+  return arr.length > 0 ? arr : [0, 1, 2, 3, 4, 5, 6];
 }
 
 function getJwtExpMs(token: string): number | undefined {
@@ -381,6 +399,7 @@ export function App() {
             {activeTab === "behaviours" ? (
               <BehavioursTab
                 session={selectedSession}
+                baseUrl={baseUrl}
                 assignments={behaviourQuery.data ?? []}
                 templates={templatesQuery.data ?? []}
                 chats={chatsQuery.data ?? []}
@@ -410,12 +429,23 @@ export function App() {
                   user?.role === "ADMIN" && selectedSessionId
                     ? {
                         state: (sessionId) => api.products2State(sessionId),
-                        getSelectionCache: (sessionId) => api.products2GetSelectionCache(sessionId),
-                        updateSelectionCache: (sessionId, body) => api.products2UpdateSelectionCache(sessionId, body),
-                        publishNow: (body) => api.products2PublishNow(body),
-                        schedule: (body) => api.products2Schedule(body),
-                        updateCampaign: (campaignId, body) => api.products2UpdateCampaign(campaignId, body),
-                        runCampaignNow: (campaignId, body) => api.products2RunCampaignNow(campaignId, body),
+                        getBoardOrder: (sessionId) => api.products2GetBoardOrder(sessionId),
+                        putBoardOrder: (sessionId, body) => api.products2PutBoardOrder(sessionId, body),
+                        createJob: (body) => api.products2CreateJob(body),
+                        patchJob: (jobId, body) => api.products2PatchJob(jobId, body),
+                        runJobNow: (jobId, body) => api.products2RunJobNow(jobId, body),
+                      }
+                    : null
+                }
+                sawaboApi={
+                  user?.role === "ADMIN" && selectedSessionId
+                    ? {
+                        getConfig: (sessionId) => api.sawaboApiGetConfig(sessionId),
+                        saveConfig: (sessionId, patch) => api.sawaboApiSaveConfig(sessionId, patch),
+                        rotateSecret: (sessionId) => api.sawaboApiRotateSecret(sessionId),
+                        getRequests: (sessionId, params) => api.sawaboApiGetRequests(sessionId, params),
+                        deleteRequest: (sessionId, reqId) => api.sawaboApiDeleteRequest(sessionId, reqId),
+                        retryRequest: (sessionId, reqId) => api.sawaboApiRetryRequest(sessionId, reqId),
                       }
                     : null
                 }
@@ -1037,6 +1067,7 @@ function pruneLegacyPostStrategy(cfg: Record<string, unknown>): Record<string, u
 
 function BehavioursTab({
   session,
+  baseUrl,
   assignments,
   templates,
   chats,
@@ -1044,12 +1075,14 @@ function BehavioursTab({
   repeaterApi,
   productsApi,
   products2Api,
+  sawaboApi,
   onRefreshAssignments,
   onSaveAssignments,
   onOpenBannerDialog,
   toast,
 }: {
   session: Session | null;
+  baseUrl: string;
   assignments: BehaviourAssignment[];
   templates: BehaviourTemplate[];
   chats: Chat[];
@@ -1101,113 +1134,8 @@ function BehavioursTab({
       },
     ) => Promise<{ action: string; tracker: unknown }>;
   } | null;
-  products2Api: {
-    state: (sessionId: string) => Promise<{
-      status: {
-        enabled: boolean;
-        configured: boolean;
-        running: boolean;
-        lastRunAt?: string;
-        lastError?: string;
-        nextRunAt?: string;
-      };
-      cache: {
-        groupIds: string[];
-        viewMode: "grid" | "list";
-        onlyNotPosted: boolean;
-        excludePosted: boolean;
-        includeCategories: string[];
-        excludeCategories: string[];
-        orderedProductIds: string[];
-      };
-      campaigns: Array<{
-        id: string;
-        title?: string | null;
-        mode: "PUBLISH_NOW" | "SCHEDULE_LATER" | "RECURRING";
-        status: "ACTIVE" | "PAUSED" | "CANCELLED" | "COMPLETED" | "FAILED";
-        runAt?: string | null;
-        nextRunAt?: string | null;
-        recurringFrequency?: string | null;
-        recurringInterval?: number | null;
-        recurringWeekdays?: number[];
-        groupIds: string[];
-        updatedAt?: string | null;
-        lastRunAt?: string | null;
-        lastError?: string | null;
-      }>;
-      board: Array<{
-        productId: string;
-        live: boolean;
-        missingFromApi: boolean;
-        posted: boolean;
-        scheduled: boolean;
-        nameFr: string;
-        categoryFr: string;
-        updatedAt?: string | null;
-        status: string;
-      }>;
-    }>;
-    getSelectionCache: (sessionId: string) => Promise<{
-      groupIds: string[];
-      viewMode: "grid" | "list";
-      onlyNotPosted: boolean;
-      excludePosted: boolean;
-      includeCategories: string[];
-      excludeCategories: string[];
-      orderedProductIds: string[];
-    }>;
-    updateSelectionCache: (
-      sessionId: string,
-      body: {
-        groupIds?: string[];
-        viewMode?: "grid" | "list";
-        onlyNotPosted?: boolean;
-        excludePosted?: boolean;
-        includeCategories?: string[];
-        excludeCategories?: string[];
-        orderedProductIds?: string[];
-      },
-    ) => Promise<unknown>;
-    publishNow: (body: {
-      sessionId: string;
-      title?: string;
-      productIds: string[];
-      groupIds: string[];
-      attachProductUrl?: boolean;
-      onlyNotPosted?: boolean;
-      excludePosted?: boolean;
-      includeCategories?: string[];
-      excludeCategories?: string[];
-      sortMode?: "manual" | "api";
-      orderedProductIds?: string[];
-    }) => Promise<{ campaignId: string; posted: number; stale: number }>;
-    schedule: (body: {
-      sessionId: string;
-      mode: "schedule_later" | "recurring";
-      runAt: string;
-      recurring?: { frequency: "daily" | "weekly"; interval: number; weekdays?: number[] };
-      title?: string;
-      productIds: string[];
-      groupIds: string[];
-      attachProductUrl?: boolean;
-      onlyNotPosted?: boolean;
-      excludePosted?: boolean;
-      includeCategories?: string[];
-      excludeCategories?: string[];
-      sortMode?: "manual" | "api";
-      orderedProductIds?: string[];
-    }) => Promise<{ campaignId: string }>;
-    updateCampaign: (
-      campaignId: string,
-      body: {
-        sessionId: string;
-        status?: "active" | "paused" | "cancelled";
-        runAt?: string;
-        recurring?: { frequency: "daily" | "weekly"; interval: number; weekdays?: number[] } | null;
-      },
-    ) => Promise<{ updated: true }>;
-    runCampaignNow: (campaignId: string, body: { sessionId: string }) => Promise<{ posted: number; stale: number }>;
-  } | null;
+  products2Api: Products2Api | null;
+  sawaboApi: SawaboApiClient | null;
   onRefreshAssignments: () => void;
   onSaveAssignments: (assignments: BehaviourAssignment[]) => Promise<void>;
   onOpenBannerDialog: () => void;
@@ -1242,70 +1170,6 @@ function BehavioursTab({
       updatedAt: string;
     }>
   >([]);
-  const [products2Busy, setProducts2Busy] = useState<"refresh" | "publish" | "schedule" | "savecache" | "campaign" | null>(null);
-  const [products2Status, setProducts2Status] = useState<{
-    enabled: boolean;
-    configured: boolean;
-    running: boolean;
-    lastRunAt?: string;
-    lastError?: string;
-    nextRunAt?: string;
-  } | null>(null);
-  const [products2Cache, setProducts2Cache] = useState<{
-    groupIds: string[];
-    viewMode: "grid" | "list";
-    onlyNotPosted: boolean;
-    excludePosted: boolean;
-    includeCategories: string[];
-    excludeCategories: string[];
-    orderedProductIds: string[];
-  }>({
-    groupIds: [],
-    viewMode: "grid",
-    onlyNotPosted: false,
-    excludePosted: false,
-    includeCategories: [],
-    excludeCategories: [],
-    orderedProductIds: [],
-  });
-  const [products2Board, setProducts2Board] = useState<
-    Array<{
-      productId: string;
-      live: boolean;
-      missingFromApi: boolean;
-      posted: boolean;
-      scheduled: boolean;
-      nameFr: string;
-      categoryFr: string;
-      updatedAt?: string | null;
-      status: string;
-    }>
-  >([]);
-  const [products2Campaigns, setProducts2Campaigns] = useState<
-    Array<{
-      id: string;
-      title?: string | null;
-      mode: "PUBLISH_NOW" | "SCHEDULE_LATER" | "RECURRING";
-      status: "ACTIVE" | "PAUSED" | "CANCELLED" | "COMPLETED" | "FAILED";
-      runAt?: string | null;
-      nextRunAt?: string | null;
-      recurringFrequency?: string | null;
-      recurringInterval?: number | null;
-      recurringWeekdays?: number[];
-      groupIds: string[];
-      updatedAt?: string | null;
-      lastRunAt?: string | null;
-      lastError?: string | null;
-    }>
-  >([]);
-  const [products2Selected, setProducts2Selected] = useState<string[]>([]);
-  const [products2DragAnchor, setProducts2DragAnchor] = useState<string | null>(null);
-  const [products2Title, setProducts2Title] = useState("");
-  const [products2RunAt, setProducts2RunAt] = useState("");
-  const [products2RecurringFrequency, setProducts2RecurringFrequency] = useState<"daily" | "weekly">("weekly");
-  const [products2RecurringInterval, setProducts2RecurringInterval] = useState("1");
-  const [products2RecurringWeekdays, setProducts2RecurringWeekdays] = useState("1,3,5");
-
   useEffect(() => {
     setDraft(
       assignments.map((item) => ({
@@ -1322,12 +1186,6 @@ function BehavioursTab({
     setRepeaterIntervalSec("5");
     setProductsStatus(null);
     setProductsTracker([]);
-    setProducts2Status(null);
-    setProducts2Board([]);
-    setProducts2Campaigns([]);
-    setProducts2Selected([]);
-    setProducts2Title("");
-    setProducts2RunAt("");
   }, [session?.id]);
 
   const bannerAssigned = draft.some((a) => a.templateId === "banner");
@@ -1338,6 +1196,7 @@ function BehavioursTab({
   const productsEnabled = draft.some((a) => a.templateId === "products" && a.enabled);
   const products2Assigned = draft.some((a) => a.templateId === "products2");
   const products2Enabled = draft.some((a) => a.templateId === "products2" && a.enabled);
+  const sawaboAssigned = draft.some((a) => a.templateId === "sawabo-api");
   const groupCount = chats.filter((c) => c.isGroup).length;
   const groups = chats.filter((c) => c.isGroup);
   const ready = isSessionReady(session);
@@ -1554,171 +1413,6 @@ function BehavioursTab({
     }
   }
 
-  async function refreshProducts2PanelState() {
-    if (!session || !products2Api) return;
-    setProducts2Busy("refresh");
-    try {
-      const state = await products2Api.state(session.id);
-      setProducts2Status(state.status);
-      setProducts2Cache({
-        groupIds: state.cache.groupIds ?? [],
-        viewMode: state.cache.viewMode ?? "grid",
-        onlyNotPosted: Boolean(state.cache.onlyNotPosted),
-        excludePosted: Boolean(state.cache.excludePosted),
-        includeCategories: state.cache.includeCategories ?? [],
-        excludeCategories: state.cache.excludeCategories ?? [],
-        orderedProductIds: state.cache.orderedProductIds ?? [],
-      });
-      setProducts2Board(state.board ?? []);
-      setProducts2Campaigns(state.campaigns ?? []);
-    } catch (err) {
-      toast(readError(err) ?? "Failed to refresh Products 2 state", "danger");
-    } finally {
-      setProducts2Busy(null);
-    }
-  }
-
-  async function saveProducts2SelectionCache(next: {
-    groupIds?: string[];
-    viewMode?: "grid" | "list";
-    onlyNotPosted?: boolean;
-    excludePosted?: boolean;
-    includeCategories?: string[];
-    excludeCategories?: string[];
-    orderedProductIds?: string[];
-  }) {
-    if (!session || !products2Api) return;
-    setProducts2Busy("savecache");
-    try {
-      await products2Api.updateSelectionCache(session.id, next);
-      await refreshProducts2PanelState();
-    } catch (err) {
-      toast(readError(err) ?? "Failed to save Products 2 cache", "danger");
-    } finally {
-      setProducts2Busy(null);
-    }
-  }
-
-  function toggleProducts2Selection(productId: string, additive: boolean) {
-    setProducts2Selected((prev) => {
-      if (additive) {
-        return prev.includes(productId) ? prev.filter((x) => x !== productId) : [...prev, productId];
-      }
-      return prev.includes(productId) ? [] : [productId];
-    });
-  }
-
-  function moveSelectedToTop() {
-    const selected = new Set(products2Selected);
-    const ordered = [
-      ...products2Board.filter((x) => selected.has(x.productId)).map((x) => x.productId),
-      ...products2Board.filter((x) => !selected.has(x.productId)).map((x) => x.productId),
-    ];
-    void saveProducts2SelectionCache({ orderedProductIds: ordered });
-  }
-
-  function selectedProducts2ProductIds(): string[] {
-    if (products2Selected.length > 0) return products2Selected;
-    return products2Board.map((x) => x.productId);
-  }
-
-  async function publishProducts2Now() {
-    if (!session || !products2Api) return;
-    const productIds = selectedProducts2ProductIds();
-    if (productIds.length === 0) {
-      toast("Select at least one product", "warning");
-      return;
-    }
-    if (products2Cache.groupIds.length === 0) {
-      toast("Select at least one target group", "warning");
-      return;
-    }
-    setProducts2Busy("publish");
-    try {
-      const products2Config = getProducts2Config();
-      const result = await products2Api.publishNow({
-        sessionId: session.id,
-        title: products2Title.trim() || undefined,
-        productIds,
-        groupIds: products2Cache.groupIds,
-        attachProductUrl: products2Config.attachProductUrl,
-        onlyNotPosted: products2Cache.onlyNotPosted,
-        excludePosted: products2Cache.excludePosted,
-        includeCategories: products2Cache.includeCategories,
-        excludeCategories: products2Cache.excludeCategories,
-        sortMode: products2Cache.orderedProductIds.length > 0 ? "manual" : "api",
-        orderedProductIds: products2Cache.orderedProductIds,
-      });
-      toast(`Products 2 published (${result.posted})`, "success");
-      await refreshProducts2PanelState();
-    } catch (err) {
-      toast(readError(err) ?? "Products 2 publish failed", "danger");
-    } finally {
-      setProducts2Busy(null);
-    }
-  }
-
-  async function scheduleProducts2(mode: "schedule_later" | "recurring") {
-    if (!session || !products2Api) return;
-    const productIds = selectedProducts2ProductIds();
-    if (productIds.length === 0) {
-      toast("Select at least one product", "warning");
-      return;
-    }
-    if (products2Cache.groupIds.length === 0) {
-      toast("Select at least one target group", "warning");
-      return;
-    }
-    if (!products2RunAt.trim()) {
-      toast("Choose date/time for scheduling", "warning");
-      return;
-    }
-    setProducts2Busy("schedule");
-    try {
-      const products2Config = getProducts2Config();
-      await products2Api.schedule({
-        sessionId: session.id,
-        mode,
-        runAt: new Date(products2RunAt).toISOString(),
-        recurring:
-          mode === "recurring"
-            ? {
-                frequency: products2RecurringFrequency,
-                interval: Math.max(1, Math.floor(Number(products2RecurringInterval) || 1)),
-                weekdays:
-                  products2RecurringFrequency === "weekly"
-                    ? parseAllowedWeekdays(products2RecurringWeekdays)
-                    : undefined,
-              }
-            : undefined,
-        title: products2Title.trim() || undefined,
-        productIds,
-        groupIds: products2Cache.groupIds,
-        attachProductUrl: products2Config.attachProductUrl,
-        onlyNotPosted: products2Cache.onlyNotPosted,
-        excludePosted: products2Cache.excludePosted,
-        includeCategories: products2Cache.includeCategories,
-        excludeCategories: products2Cache.excludeCategories,
-        sortMode: products2Cache.orderedProductIds.length > 0 ? "manual" : "api",
-        orderedProductIds: products2Cache.orderedProductIds,
-      });
-      toast("Products 2 campaign scheduled", "success");
-      await refreshProducts2PanelState();
-    } catch (err) {
-      toast(readError(err) ?? "Products 2 schedule failed", "danger");
-    } finally {
-      setProducts2Busy(null);
-    }
-  }
-
-  function parseAllowedWeekdays(raw: string): number[] {
-    const values = raw
-      .split(",")
-      .map((x) => Number(x.trim()))
-      .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
-    return values.length > 0 ? [...new Set(values)] : [0, 1, 2, 3, 4, 5, 6];
-  }
-
   async function runTrackerAction(
     trackerId: string,
     action: "toggle_unavailable" | "mark_available" | "set_redirect_url" | "clear_redirect_url" | "repost_now",
@@ -1746,12 +1440,6 @@ function BehavioursTab({
     void refreshProductsPanelState();
     // Intentionally scoped to panel visibility + selected session.
   }, [session?.id, productsAssigned]);
-
-  useEffect(() => {
-    if (!session || !products2Api || !products2Assigned) return;
-    void refreshProducts2PanelState();
-    // Intentionally scoped to panel visibility + selected session.
-  }, [session?.id, products2Assigned]);
 
   return (
     <section className="card">
@@ -2014,442 +1702,29 @@ function BehavioursTab({
           ) : null}
 
           {products2Assigned ? (
-            <div className="panel behavioursProducts2Panel" id="behaviours-products2-panel">
-              <h3>Products 2</h3>
-              <p className="muted">
-                Recommended menu workflow: multi-group posting, publish now, schedule later, recurring campaigns, and persistent
-                board selections.
-              </p>
-              {!ready ? <p className="muted">Products 2 unlocks when the session is ready.</p> : null}
-              {!products2Enabled ? (
-                <p className="muted">Turn on the <code>products2</code> assignment above to enable this panel.</p>
-              ) : null}
-
-              <div className="fieldRow">
-                <label htmlFor="products2ApiUrl" className="label">
-                  API URL
-                </label>
-                <input
-                  id="products2ApiUrl"
-                  className="input mono"
-                  value={getProducts2Config().apiUrl}
-                  onChange={(e) => updateProducts2Config({ apiUrl: e.target.value })}
-                  disabled={!canEdit}
-                />
-              </div>
-
-              <div className="row wrap">
-                <div className="fieldRow">
-                  <label htmlFor="products2AuthType" className="label">
-                    Auth type
-                  </label>
-                  <select
-                    id="products2AuthType"
-                    className="input"
-                    value={getProducts2Config().authType}
-                    onChange={(e) => updateProducts2Config({ authType: e.target.value })}
-                    disabled={!canEdit}
-                  >
-                    <option value="none">None</option>
-                    <option value="bearer">Bearer token</option>
-                    <option value="basic">Basic (username/password)</option>
-                  </select>
-                </div>
-                <div className="fieldRow">
-                  <label htmlFor="products2CycleSec" className="label">
-                    Cycle interval (s)
-                  </label>
-                  <input
-                    id="products2CycleSec"
-                    className="input tiny mono"
-                    type="number"
-                    min={5}
-                    max={86400}
-                    value={getProducts2Config().cycleIntervalSeconds}
-                    onChange={(e) =>
-                      updateProducts2Config({
-                        cycleIntervalSeconds: Math.min(86400, Math.max(5, Math.floor(Number(e.target.value) || 300))),
-                      })
-                    }
-                    disabled={!canEdit}
-                  />
-                </div>
-                <div className="fieldRow">
-                  <label htmlFor="products2MaxJobs" className="label">
-                    Max jobs / cycle
-                  </label>
-                  <input
-                    id="products2MaxJobs"
-                    className="input tiny mono"
-                    type="number"
-                    min={1}
-                    max={200}
-                    value={getProducts2Config().maxJobsPerCycle}
-                    onChange={(e) =>
-                      updateProducts2Config({
-                        maxJobsPerCycle: Math.min(200, Math.max(1, Math.floor(Number(e.target.value) || 25))),
-                      })
-                    }
-                    disabled={!canEdit}
-                  />
-                </div>
-              </div>
-
-              <div className="row wrap">
-                {groups.map((g) => {
-                  const checked = products2Cache.groupIds.includes(g.id);
-                  return (
-                    <label key={`p2-group-${g.id}`} className="checkbox products2GroupCheck">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          const next = e.target.checked
-                            ? [...products2Cache.groupIds, g.id]
-                            : products2Cache.groupIds.filter((x) => x !== g.id);
-                          setProducts2Cache((prev) => ({ ...prev, groupIds: [...new Set(next)] }));
-                        }}
-                        disabled={!canEdit}
-                      />
-                      {g.name}
-                    </label>
-                  );
-                })}
-              </div>
-
-              <div className="row wrap">
-                <button
-                  className="btn btn-secondary"
-                  type="button"
-                  disabled={!products2Api || !session || products2Busy !== null}
-                  onClick={() => void refreshProducts2PanelState()}
-                >
-                  {products2Busy === "refresh" ? <Spinner small ariaLabel="Refreshing products2 state" /> : null}
-                  Refresh Products 2 state
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  type="button"
-                  disabled={!products2Api || !session || products2Busy !== null || !canEdit}
-                  onClick={() =>
-                    void saveProducts2SelectionCache({
-                      groupIds: products2Cache.groupIds,
-                      viewMode: products2Cache.viewMode,
-                      onlyNotPosted: products2Cache.onlyNotPosted,
-                      excludePosted: products2Cache.excludePosted,
-                      includeCategories: products2Cache.includeCategories,
-                      excludeCategories: products2Cache.excludeCategories,
-                      orderedProductIds: products2Cache.orderedProductIds,
-                    })
-                  }
-                >
-                  {products2Busy === "savecache" ? <Spinner small ariaLabel="Saving cache" /> : null}
-                  Save selection cache
-                </button>
-                <button
-                  className="btn btn-primary"
-                  type="button"
-                  disabled={!products2Api || !session || !ready || !products2Enabled || products2Busy !== null || !canEdit}
-                  onClick={() => void publishProducts2Now()}
-                >
-                  {products2Busy === "publish" ? <Spinner small ariaLabel="Publishing products2" /> : null}
-                  Publish now
-                </button>
-              </div>
-
-              <div className="row wrap">
-                <label className="checkbox">
-                  <input
-                    type="checkbox"
-                    checked={products2Cache.onlyNotPosted}
-                    onChange={(e) => setProducts2Cache((prev) => ({ ...prev, onlyNotPosted: e.target.checked }))}
-                    disabled={!canEdit}
-                  />
-                  Only not posted
-                </label>
-                <label className="checkbox">
-                  <input
-                    type="checkbox"
-                    checked={products2Cache.excludePosted}
-                    onChange={(e) => setProducts2Cache((prev) => ({ ...prev, excludePosted: e.target.checked }))}
-                    disabled={!canEdit}
-                  />
-                  Exclude posted
-                </label>
-                <label className="checkbox">
-                  <input
-                    type="checkbox"
-                    checked={getProducts2Config().attachProductUrl}
-                    onChange={(e) => updateProducts2Config({ attachProductUrl: e.target.checked })}
-                    disabled={!canEdit}
-                  />
-                  Attach website product URL in caption
-                </label>
-                <div className="fieldRow">
-                  <label htmlFor="products2ViewMode" className="label">
-                    View
-                  </label>
-                  <select
-                    id="products2ViewMode"
-                    className="input"
-                    value={products2Cache.viewMode}
-                    onChange={(e) => setProducts2Cache((prev) => ({ ...prev, viewMode: e.target.value as "grid" | "list" }))}
-                    disabled={!canEdit}
-                  >
-                    <option value="grid">Grid</option>
-                    <option value="list">List</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="row wrap">
-                <div className="fieldRow">
-                  <label htmlFor="products2Title" className="label">
-                    Campaign title
-                  </label>
-                  <input
-                    id="products2Title"
-                    className="input"
-                    value={products2Title}
-                    onChange={(e) => setProducts2Title(e.target.value)}
-                    disabled={!canEdit}
-                  />
-                </div>
-                <div className="fieldRow">
-                  <label htmlFor="products2RunAt" className="label">
-                    Schedule date/time
-                  </label>
-                  <input
-                    id="products2RunAt"
-                    className="input"
-                    type="datetime-local"
-                    value={products2RunAt}
-                    onChange={(e) => setProducts2RunAt(e.target.value)}
-                    disabled={!canEdit}
-                  />
-                </div>
-                <div className="fieldRow">
-                  <label htmlFor="products2RecurringFrequency" className="label">
-                    Recurring frequency
-                  </label>
-                  <select
-                    id="products2RecurringFrequency"
-                    className="input"
-                    value={products2RecurringFrequency}
-                    onChange={(e) => setProducts2RecurringFrequency(e.target.value as "daily" | "weekly")}
-                    disabled={!canEdit}
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                  </select>
-                </div>
-                <div className="fieldRow">
-                  <label htmlFor="products2RecurringInterval" className="label">
-                    Recurring interval
-                  </label>
-                  <input
-                    id="products2RecurringInterval"
-                    className="input tiny mono"
-                    type="number"
-                    min={1}
-                    max={365}
-                    value={products2RecurringInterval}
-                    onChange={(e) => setProducts2RecurringInterval(e.target.value)}
-                    disabled={!canEdit}
-                  />
-                </div>
-                {products2RecurringFrequency === "weekly" ? (
-                  <div className="fieldRow">
-                    <label htmlFor="products2RecurringWeekdays" className="label">
-                      Recurring weekdays (0-6)
-                    </label>
-                    <input
-                      id="products2RecurringWeekdays"
-                      className="input mono"
-                      value={products2RecurringWeekdays}
-                      onChange={(e) => setProducts2RecurringWeekdays(e.target.value)}
-                      disabled={!canEdit}
-                      placeholder="1,3,5"
-                    />
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="row wrap">
-                <button
-                  className="btn btn-secondary"
-                  type="button"
-                  disabled={!products2Api || !session || !ready || !products2Enabled || products2Busy !== null || !canEdit}
-                  onClick={() => void scheduleProducts2("schedule_later")}
-                >
-                  {products2Busy === "schedule" ? <Spinner small ariaLabel="Scheduling products2" /> : null}
-                  Schedule later
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  type="button"
-                  disabled={!products2Api || !session || !ready || !products2Enabled || products2Busy !== null || !canEdit}
-                  onClick={() => void scheduleProducts2("recurring")}
-                >
-                  {products2Busy === "schedule" ? <Spinner small ariaLabel="Scheduling recurring products2" /> : null}
-                  Recurring post
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  type="button"
-                  disabled={products2Selected.length === 0 || !canEdit}
-                  onClick={() => {
-                    moveSelectedToTop();
-                    toast("Selected products moved to top order", "info");
-                  }}
-                >
-                  Drag reorder helper: move selected on top
-                </button>
-              </div>
-
-              {products2Status ? (
-                <div className="panel">
-                  <h4>Products 2 runtime</h4>
-                  <p className="smallId">
-                    enabled={String(products2Status.enabled)} configured={String(products2Status.configured)} running=
-                    {String(products2Status.running)}
-                  </p>
-                  {products2Status.lastRunAt ? <p className="smallId">last run: {products2Status.lastRunAt}</p> : null}
-                  {products2Status.nextRunAt ? <p className="smallId">next run: {products2Status.nextRunAt}</p> : null}
-                  {products2Status.lastError ? <p className="danger smallId">{products2Status.lastError}</p> : null}
-                </div>
-              ) : null}
-
-              <div className={products2Cache.viewMode === "grid" ? "products2BoardGrid" : "products2BoardList"}>
-                {products2Board.map((row) => {
-                  const selected = products2Selected.includes(row.productId);
-                  return (
-                    <button
-                      key={`p2-row-${row.productId}`}
-                      type="button"
-                      className={[
-                        "products2Card",
-                        selected ? "products2Card-selected" : "",
-                        row.missingFromApi ? "products2Card-missing" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      onMouseDown={(e) => {
-                        if (!canEdit) return;
-                        if (e.shiftKey && products2DragAnchor) {
-                          const ids = products2Board.map((x) => x.productId);
-                          const a = ids.indexOf(products2DragAnchor);
-                          const b = ids.indexOf(row.productId);
-                          if (a >= 0 && b >= 0) {
-                            const [start, end] = a < b ? [a, b] : [b, a];
-                            setProducts2Selected(ids.slice(start, end + 1));
-                            return;
-                          }
-                        }
-                        setProducts2DragAnchor(row.productId);
-                        toggleProducts2Selection(row.productId, e.ctrlKey || e.metaKey);
-                      }}
-                    >
-                      <strong>{row.nameFr}</strong>
-                      <span className="smallId mono">{row.productId}</span>
-                      <span className="smallId">{row.categoryFr || "(no category)"}</span>
-                      <span className="row wrap">
-                        <span className="pill">{row.posted ? "posted" : "not_posted"}</span>
-                        <span className="pill">{row.scheduled ? "scheduled" : "not_scheduled"}</span>
-                        {row.missingFromApi ? <span className="pill danger">missing_from_api</span> : null}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {products2Campaigns.length > 0 ? (
-                <div className="panel">
-                  <h4>Products 2 campaigns</h4>
-                  <ul className="list compactList">
-                    {products2Campaigns.map((campaign) => (
-                      <li key={`p2-campaign-${campaign.id}`}>
-                        <span>
-                          <strong>{campaign.title || campaign.id}</strong>
-                          <br />
-                          <span className="smallId">
-                            {campaign.mode} / {campaign.status}
-                          </span>
-                          {campaign.nextRunAt ? <p className="smallId">next: {campaign.nextRunAt}</p> : null}
-                          {campaign.lastError ? <p className="danger smallId">{campaign.lastError}</p> : null}
-                        </span>
-                        <span className="row wrap">
-                          <button
-                            className="btn btn-primary"
-                            type="button"
-                            disabled={!products2Api || !session || products2Busy !== null || !canEdit}
-                            onClick={async () => {
-                              if (!products2Api || !session) return;
-                              setProducts2Busy("campaign");
-                              try {
-                                await products2Api.runCampaignNow(campaign.id, { sessionId: session.id });
-                                toast("Campaign executed now", "success");
-                                await refreshProducts2PanelState();
-                              } catch (err) {
-                                toast(readError(err) ?? "Run now failed", "danger");
-                              } finally {
-                                setProducts2Busy(null);
-                              }
-                            }}
-                          >
-                            Run now
-                          </button>
-                          <button
-                            className="btn btn-secondary"
-                            type="button"
-                            disabled={!products2Api || !session || products2Busy !== null || !canEdit}
-                            onClick={async () => {
-                              if (!products2Api || !session) return;
-                              setProducts2Busy("campaign");
-                              try {
-                                await products2Api.updateCampaign(campaign.id, {
-                                  sessionId: session.id,
-                                  status: campaign.status === "ACTIVE" ? "paused" : "active",
-                                });
-                                await refreshProducts2PanelState();
-                              } catch (err) {
-                                toast(readError(err) ?? "Pause/resume failed", "danger");
-                              } finally {
-                                setProducts2Busy(null);
-                              }
-                            }}
-                          >
-                            {campaign.status === "ACTIVE" ? "Pause" : "Resume"}
-                          </button>
-                          <button
-                            className="btn btn-danger"
-                            type="button"
-                            disabled={!products2Api || !session || products2Busy !== null || !canEdit}
-                            onClick={async () => {
-                              if (!products2Api || !session) return;
-                              setProducts2Busy("campaign");
-                              try {
-                                await products2Api.updateCampaign(campaign.id, {
-                                  sessionId: session.id,
-                                  status: "cancelled",
-                                });
-                                await refreshProducts2PanelState();
-                              } catch (err) {
-                                toast(readError(err) ?? "Cancel failed", "danger");
-                              } finally {
-                                setProducts2Busy(null);
-                              }
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
+            <Products2Panel
+              session={session}
+              groups={groups}
+              products2Assigned={products2Assigned}
+              products2Enabled={products2Enabled}
+              ready={ready}
+              canEdit={canEdit}
+              products2Api={products2Api}
+              getProducts2Config={getProducts2Config}
+              updateProducts2Config={updateProducts2Config}
+              toast={toast}
+            />
+          ) : null}
+          {sawaboAssigned ? (
+            <SawaboApiPanel
+              session={session ? { id: session.id, displayName: session.displayName } : null}
+              baseUrl={baseUrl}
+              groups={groups}
+              canEdit={canEdit}
+              sawaboAssigned={sawaboAssigned}
+              sawaboApi={sawaboApi}
+              toast={toast}
+            />
           ) : null}
           {productsAssigned ? (
             <div className="panel behavioursProductsPanel">

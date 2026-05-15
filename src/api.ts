@@ -322,27 +322,27 @@ export function createApiClient(baseUrl: string, hooks: AuthHooks) {
           lastError?: string;
           nextRunAt?: string;
         };
-        cache: {
-          groupIds: string[];
-          viewMode: "grid" | "list";
-          onlyNotPosted: boolean;
-          excludePosted: boolean;
-          includeCategories: string[];
-          excludeCategories: string[];
+        boardOrder: {
           orderedProductIds: string[];
-          updatedAt?: string;
+          viewMode: "grid" | "list";
+          groupIds: string[];
+          lastFilter: unknown;
+          updatedAt?: string | null;
         };
-        campaigns: Array<{
+        jobs: Array<{
           id: string;
           title?: string | null;
-          mode: "PUBLISH_NOW" | "SCHEDULE_LATER" | "RECURRING";
-          status: "ACTIVE" | "PAUSED" | "CANCELLED" | "COMPLETED" | "FAILED";
+          kind: "POST_NOW" | "POST_LATER" | "REPEAT";
+          status: "PENDING" | "RUNNING" | "DONE" | "FAILED" | "CANCELLED" | "PAUSED" | "ACTIVE";
           runAt?: string | null;
           nextRunAt?: string | null;
-          recurringFrequency?: string | null;
-          recurringInterval?: number | null;
-          recurringWeekdays?: number[];
+          repeat?: unknown;
+          productIds: string[];
           groupIds: string[];
+          attachProductUrl: boolean;
+          skipAlreadyPostedHere: boolean;
+          postedCount: number;
+          staleCount: number;
           updatedAt?: string | null;
           lastRunAt?: string | null;
           lastError?: string | null;
@@ -352,94 +352,188 @@ export function createApiClient(baseUrl: string, hooks: AuthHooks) {
           live: boolean;
           missingFromApi: boolean;
           posted: boolean;
-          scheduled: boolean;
+          postedCount: number;
+          scheduledJobCount: number;
           nameFr: string;
           categoryFr: string;
           updatedAt?: string | null;
-          status: string;
+          status?: string;
+          apiStatus: string;
+          priceText: string;
+          imageUrl?: string | null;
+          changedSinceLastPost: boolean;
+          lastPostedAt?: string | null;
+        }>;
+        activity: Array<{
+          id: string;
+          productId: string;
+          groupId: string;
+          postedAt?: string | null;
+          lastMessageId?: string | null;
+          imageUrl?: string | null;
+          nameFr: string;
+          changedSincePost: boolean;
         }>;
       }>(`/api/behaviours/products2/${encodeURIComponent(sessionId)}/state`),
-    products2GetSelectionCache: (sessionId: string) =>
+    products2GetBoardOrder: (sessionId: string) =>
       request<{
-        groupIds: string[];
-        viewMode: "grid" | "list";
-        onlyNotPosted: boolean;
-        excludePosted: boolean;
-        includeCategories: string[];
-        excludeCategories: string[];
         orderedProductIds: string[];
-        updatedAt?: string;
-      }>(`/api/behaviours/products2/${encodeURIComponent(sessionId)}/selection-cache`),
-    products2UpdateSelectionCache: (
+        viewMode: "grid" | "list";
+        groupIds: string[];
+        lastFilter: unknown;
+        updatedAt?: string | null;
+      }>(`/api/behaviours/products2/${encodeURIComponent(sessionId)}/board-order`),
+    products2PutBoardOrder: (
       sessionId: string,
       body: {
-        groupIds?: string[];
-        viewMode?: "grid" | "list";
-        onlyNotPosted?: boolean;
-        excludePosted?: boolean;
-        includeCategories?: string[];
-        excludeCategories?: string[];
         orderedProductIds?: string[];
+        viewMode?: "grid" | "list";
+        groupIds?: string[];
+        lastFilter?: Record<string, unknown> | null;
       },
     ) =>
       request<{
-        groupIds: string[];
-        viewMode: "grid" | "list";
-        onlyNotPosted: boolean;
-        excludePosted: boolean;
-        includeCategories: string[];
-        excludeCategories: string[];
         orderedProductIds: string[];
-      }>(`/api/behaviours/products2/${encodeURIComponent(sessionId)}/selection-cache`, {
+        viewMode: "grid" | "list";
+        groupIds: string[];
+        lastFilter: unknown;
+        updatedAt?: string | null;
+      }>(`/api/behaviours/products2/${encodeURIComponent(sessionId)}/board-order`, {
         method: "PUT",
         body: JSON.stringify(body),
       }),
-    products2PublishNow: (
-      body: {
-        sessionId: string;
-        title?: string;
-        productIds: string[];
-        groupIds: string[];
-        attachProductUrl?: boolean;
-        onlyNotPosted?: boolean;
-        excludePosted?: boolean;
-        includeCategories?: string[];
-        excludeCategories?: string[];
-        sortMode?: "manual" | "api";
-        orderedProductIds?: string[];
-      },
-    ) => request<{ campaignId: string; posted: number; stale: number }>("/api/behaviours/products2/publish-now", { method: "POST", body: JSON.stringify(body) }),
-    products2Schedule: (
-      body: {
-        sessionId: string;
-        mode: "schedule_later" | "recurring";
-        runAt: string;
-        recurring?: { frequency: "daily" | "weekly"; interval: number; weekdays?: number[] };
-        title?: string;
-        productIds: string[];
-        groupIds: string[];
-        attachProductUrl?: boolean;
-        onlyNotPosted?: boolean;
-        excludePosted?: boolean;
-        includeCategories?: string[];
-        excludeCategories?: string[];
-        sortMode?: "manual" | "api";
-        orderedProductIds?: string[];
-      },
-    ) => request<{ campaignId: string }>("/api/behaviours/products2/schedule", { method: "POST", body: JSON.stringify(body) }),
-    products2UpdateCampaign: (
-      campaignId: string,
+    products2CreateJob: (body: {
+      sessionId: string;
+      kind: "POST_NOW" | "POST_LATER" | "REPEAT";
+      title?: string;
+      productIds: string[];
+      groupIds: string[];
+      attachProductUrl?: boolean;
+      skipAlreadyPostedHere?: boolean;
+      runAt?: string;
+      repeat?: { frequency: "daily" | "weekly"; interval: number; weekdays?: number[] };
+    }) =>
+      request<{ jobId: string; posted?: number; stale?: number }>("/api/behaviours/products2/jobs", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    products2PatchJob: (
+      jobId: string,
       body: {
         sessionId: string;
         status?: "active" | "paused" | "cancelled";
         runAt?: string;
-        recurring?: { frequency: "daily" | "weekly"; interval: number; weekdays?: number[] } | null;
+        repeat?: { frequency: "daily" | "weekly"; interval: number; weekdays?: number[] } | null;
       },
-    ) => request<{ updated: true }>(`/api/behaviours/products2/campaign/${encodeURIComponent(campaignId)}`, { method: "PATCH", body: JSON.stringify(body) }),
-    products2RunCampaignNow: (campaignId: string, body: { sessionId: string }) =>
+    ) =>
+      request<{ updated: true }>(`/api/behaviours/products2/jobs/${encodeURIComponent(jobId)}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    products2RunJobNow: (jobId: string, body: { sessionId: string }) =>
       request<{ posted: number; stale: number }>(
-        `/api/behaviours/products2/campaign/${encodeURIComponent(campaignId)}/run-now`,
+        `/api/behaviours/products2/jobs/${encodeURIComponent(jobId)}/run-now`,
         { method: "POST", body: JSON.stringify(body) },
+      ),
+    sawaboApiGetConfig: (sessionId: string) =>
+      request<{
+        id: string | null;
+        sessionId: string;
+        sessionKey?: string;
+        enabled: boolean;
+        callbackUrl: string | null;
+        callbackSecret: string | null;
+        secretHint: string;
+        secret?: string;
+        allowedActions: string[];
+        defaultGroupIds: string[];
+        maxRequestsPerHour: number;
+        createdAt?: string | null;
+        updatedAt?: string | null;
+      }>(`/api/behaviours/sawabo-api/${encodeURIComponent(sessionId)}/config`),
+    sawaboApiSaveConfig: (
+      sessionId: string,
+      body: {
+        enabled?: boolean;
+        callbackUrl?: string | null;
+        callbackSecret?: string | null;
+        allowedActions?: string[];
+        defaultGroupIds?: string[];
+        maxRequestsPerHour?: number;
+      },
+    ) =>
+      request<{
+        id: string | null;
+        sessionId: string;
+        sessionKey?: string;
+        enabled: boolean;
+        callbackUrl: string | null;
+        callbackSecret: string | null;
+        secretHint: string;
+        secret?: string;
+        allowedActions: string[];
+        defaultGroupIds: string[];
+        maxRequestsPerHour: number;
+        createdAt?: string | null;
+        updatedAt?: string | null;
+      }>(`/api/behaviours/sawabo-api/${encodeURIComponent(sessionId)}/config`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    sawaboApiRotateSecret: (sessionId: string) =>
+      request<{
+        id: string | null;
+        sessionId: string;
+        sessionKey?: string;
+        enabled: boolean;
+        callbackUrl: string | null;
+        callbackSecret: string | null;
+        secretHint: string;
+        secret: string;
+        allowedActions: string[];
+        defaultGroupIds: string[];
+        maxRequestsPerHour: number;
+        createdAt?: string | null;
+        updatedAt?: string | null;
+      }>(`/api/behaviours/sawabo-api/${encodeURIComponent(sessionId)}/config/rotate-secret`, {
+        method: "POST",
+      }),
+    sawaboApiGetRequests: (
+      sessionId: string,
+      params?: { limit?: number; offset?: number; status?: string; action?: string },
+    ) => {
+      const qs = new URLSearchParams();
+      if (params?.limit !== undefined) qs.set("limit", String(params.limit));
+      if (params?.offset !== undefined) qs.set("offset", String(params.offset));
+      if (params?.status) qs.set("status", params.status);
+      if (params?.action) qs.set("action", params.action);
+      return request<{
+        rows: Array<{
+          id: string;
+          requestId: string | null;
+          action: string;
+          status: "PENDING" | "RUNNING" | "DONE" | "FAILED";
+          result: unknown;
+          error: string | null;
+          callbackSent: boolean;
+          callbackError: string | null;
+          createdAt?: string | null;
+          updatedAt?: string | null;
+        }>;
+        total: number;
+      }>(
+        `/api/behaviours/sawabo-api/${encodeURIComponent(sessionId)}/requests${qs.toString() ? `?${qs.toString()}` : ""}`,
+      );
+    },
+    sawaboApiDeleteRequest: (sessionId: string, reqId: string) =>
+      request<{ deleted: true }>(
+        `/api/behaviours/sawabo-api/${encodeURIComponent(sessionId)}/requests/${encodeURIComponent(reqId)}`,
+        { method: "DELETE" },
+      ),
+    sawaboApiRetryRequest: (sessionId: string, reqId: string) =>
+      request<Record<string, unknown>>(
+        `/api/behaviours/sawabo-api/${encodeURIComponent(sessionId)}/requests/${encodeURIComponent(reqId)}/retry`,
+        { method: "POST" },
       ),
 
     adminUsers: () => request<AdminUser[]>("/api/admin/users"),

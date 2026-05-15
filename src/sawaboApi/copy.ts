@@ -1,0 +1,53 @@
+export const sawaboCopy = {
+  title: "Sawabo API Webhook",
+  subtitle: "Let your external Sawabo API trigger actions on this bot through signed webhooks.",
+  connectionTitle: "Connection",
+  connectionSubtitle: "Webhook endpoint, secret and callback settings",
+  actionsTitle: "Allowed actions",
+  actionsSubtitle: "Pick which remote actions can run for this session",
+  defaultsTitle: "Default target groups",
+  defaultsSubtitle: "Used when a request omits `groupIds`",
+  requestLogTitle: "Request log",
+  requestLogSubtitle: "Recent webhook requests and callback delivery status",
+  save: "Save config",
+  rotateSecret: "Rotate secret",
+  refresh: "Refresh",
+  retry: "Retry",
+  delete: "Delete",
+  reveal: "Reveal",
+  hide: "Hide",
+  copy: "Copy",
+  endpointTip:
+    "Your external API must POST to this URL and sign the raw JSON body with X-Sawabo-Signature.",
+  secretTip:
+    "Shared secret used for HMAC-SHA256 verification. Rotate if compromised. New value is shown once after rotation.",
+  callbackTip:
+    "Optional URL where asynchronous results are POSTed back. If empty, async actions only update the request log.",
+  callbackSecretTip:
+    "Optional secret used to sign callback payloads with X-Sawabo-Callback-Signature.",
+  allowAllTip:
+    "When enabled, every supported action is accepted. Turn off to whitelist only specific actions.",
+  maxRateTip:
+    "Maximum accepted webhook requests per hour for this session. Excess requests return RATE_LIMITED.",
+  retryTip: "Re-run this failed request using its stored payload.",
+  deleteTip: "Delete this log entry from the dashboard view.",
+  actionList: [
+    "ping",
+    "get_status",
+    "get_groups",
+    "get_jobs",
+    "get_activity",
+    "send_text",
+    "send_media",
+    "post_product",
+    "post_products",
+    "create_job",
+    "cancel_job",
+    "pause_job",
+    "resume_job",
+    "run_job_now",
+    "notify_order",
+    "notify_restock",
+    "notify_custom",
+  ] as const,
+};

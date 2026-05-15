@@ -566,10 +566,11 @@ textarea:focus-visible {
   background: color-mix(in srgb, var(--surface) 82%, var(--bg));
   color: var(--text);
   text-align: left;
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.65rem;
-  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.35rem;
+  padding: 0.35rem;
 }
 
 .products2Card-selected {
@@ -580,6 +581,309 @@ textarea:focus-visible {
 .products2Card-missing {
   border-style: dashed;
   opacity: 0.85;
+}
+
+.products2H4 {
+  margin: 0 0 0.15rem;
+  font-size: 0.95rem;
+}
+
+.products2Sub {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+}
+
+.products2Disclosure {
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0.35rem 0.5rem;
+  margin-top: 0.5rem;
+  background: color-mix(in srgb, var(--surface) 90%, var(--bg));
+}
+
+.products2Disclosure-summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.products2Disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.products2Disclosure-body {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.products2Disclosure-nested {
+  margin-top: 0.35rem;
+}
+
+.products2BoardToolbar {
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.products2Search {
+  min-width: 200px;
+  flex: 1;
+}
+
+.products2DndHandle {
+  cursor: grab;
+  border: 1px dashed var(--border);
+  background: color-mix(in srgb, var(--surface) 70%, var(--bg));
+  color: var(--muted);
+  align-self: stretch;
+  width: 2rem;
+  flex-shrink: 0;
+}
+
+.products2Card-main {
+  flex: 1;
+  display: flex;
+  gap: 0.45rem;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.products2CardImg {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.products2CardImg-placeholder {
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+}
+
+.products2CardBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.products2CardTitle {
+  font-weight: 600;
+}
+
+.products2CardPrice {
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
+}
+
+.products2Pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.products2Pill {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.products2Pill-ok {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  color: color-mix(in srgb, var(--accent) 90%, var(--text));
+}
+
+.products2Pill-warn {
+  border-color: color-mix(in srgb, #f59e0b 55%, var(--border));
+  color: #f59e0b;
+}
+
+.products2Pill-danger {
+  border-color: color-mix(in srgb, #ec4899 55%, var(--border));
+  color: #ec4899;
+}
+
+.products2Pill-muted {
+  color: var(--muted);
+}
+
+.products2ActionBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, var(--bg));
+}
+
+.products2ActionBar-inner {
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.products2ActionBar-count {
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+}
+
+.products2SkipRow {
+  align-items: center;
+}
+
+.products2ActionBar-actions,
+.products2ActionBar-primary {
+  gap: 0.35rem;
+}
+
+.products2Tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.products2Tooltip-bubble {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  bottom: 100%;
+  margin-bottom: 0.35rem;
+  max-width: 22rem;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+.products2Tooltip:hover .products2Tooltip-bubble,
+.products2Tooltip:focus-within .products2Tooltip-bubble {
+  display: block;
+}
+
+.products2JobList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.products2JobRow {
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.products2JobActions {
+  gap: 0.25rem;
+}
+
+.products2ActivityList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.products2ActivityRow {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.35rem;
+}
+
+.products2ActivityThumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.products2ActivityThumb-placeholder {
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+}
+
+.products2GroupGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.products2ScheduleFields {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.sawaboApiPanel {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sawaboApiDisclosure {
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.55rem;
+  background: color-mix(in srgb, var(--surface) 90%, var(--bg));
+}
+
+.sawaboApiDisclosure-summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.sawaboApiDisclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.sawaboApiDisclosure-body {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.sawaboApiActionGrid,
+.sawaboApiGroupGrid {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.sawaboApiLogTable {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.sawaboApiLogRow {
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.55rem;
+  display: flex;
+  gap: 0.45rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.sawaboApiLogMain {
+  min-width: 240px;
+  flex: 1;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.btn-sm {
+  font-size: 0.82rem;
+  padding: 0.2rem 0.45rem;
 }
 
 .chatActionsInline {
